@@ -4,6 +4,8 @@ import '../blocs/authentication/authentication_bloc.dart';
 import '../blocs/authentication/authentication_event.dart';
 import '../blocs/authentication/authentication_state.dart';
 import '../mixins/validation_mixin.dart';
+import '../theme/app_theme.dart';
+import '../widgets/design_system.dart';
 
 class AuthenticationForm extends StatefulWidget {
   const AuthenticationForm({super.key});
@@ -27,90 +29,68 @@ class _AuthenticationFormState extends State<AuthenticationForm>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Email',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
+              const InputLabel('Email'),
               TextFormField(
-                decoration: InputDecoration(
-                  hintText: 'Enter your email',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(color: AppColors.text, fontSize: 14),
+                decoration: const InputDecoration(hintText: 'you@example.com'),
                 initialValue: state.email,
-                onChanged: (value) => context.read<AuthenticationBloc>().add(
-                  AuthenticationEmailChanged(value),
+                onChanged: (v) => context.read<AuthenticationBloc>().add(
+                  AuthenticationEmailChanged(v),
                 ),
-                validator: (value) => validateEmail(value ?? ''),
+                validator: (v) => validateEmail(v ?? ''),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Password',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              const InputLabel('Password'),
               TextFormField(
-                decoration: InputDecoration(
-                  hintText: 'Enter your password',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
                 obscureText: _obscurePassword,
-                onChanged: (value) => context.read<AuthenticationBloc>().add(
-                  AuthenticationPasswordChanged(value),
+                style: const TextStyle(color: AppColors.text, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: '••••••••',
+                  suffixIcon: GestureDetector(
+                    onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                    child: Icon(
+                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: AppColors.subtle,
+                      size: 18,
+                    ),
+                  ),
                 ),
-                validator: (value) => validatePassword(value ?? ''),
+                onChanged: (v) => context.read<AuthenticationBloc>().add(
+                  AuthenticationPasswordChanged(v),
+                ),
+                validator: (v) => validatePassword(v ?? ''),
               ),
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Text('Forgot password?'),
+                child: GestureDetector(
+                  onTap: () {},
+                  child: const Text(
+                    'Forgot password?',
+                    style: TextStyle(fontSize: 12, color: AppColors.violetBright, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              if (state.status == AuthenticationStatus.loading)
-                const Center(child: CircularProgressIndicator())
-              else
-                ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState?.validate() ?? false) {
-                      context.read<AuthenticationBloc>().add(
-                        const AuthenticationLoginSubmitted(),
-                      );
-                    }
-                  },
-                  child: const Text('Sign in'),
-                ),
-              if (state.status == AuthenticationStatus.failure &&
-                  state.errorMessage != null)
+              const SizedBox(height: 18),
+              PrimaryButton(
+                label: 'Sign in',
+                isLoading: state.status == AuthenticationStatus.loading,
+                onPressed: () {
+                  if (_formKey.currentState?.validate() ?? false) {
+                    context.read<AuthenticationBloc>().add(
+                      const AuthenticationLoginSubmitted(),
+                    );
+                  }
+                },
+              ),
+              if (state.status == AuthenticationStatus.failure && state.errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.only(top: 12),
                   child: Text(
                     state.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    style: const TextStyle(color: AppColors.hot, fontSize: 12),
+                    textAlign: TextAlign.center,
                   ),
                 ),
             ],

@@ -3,10 +3,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:toastification/toastification.dart';
 
+import '../blocs/beat/beat_bloc.dart';
+import '../blocs/beat/beat_event.dart';
+import '../blocs/profile/profile_bloc.dart';
+import '../blocs/profile/profile_event.dart';
+import '../blocs/streak/streak_bloc.dart';
+import '../blocs/streak/streak_event.dart';
 import '../blocs/task/task_bloc.dart';
 import '../blocs/task/task_state.dart';
+import '../services/beat_service.dart';
+import '../services/profile_service.dart';
+import '../services/streak_service.dart';
 import '../services/task_service.dart';
-import 'add_task_sheet.dart';
+import '../theme/app_theme.dart';
 import 'beats_page.dart';
 import 'home_page.dart';
 import 'profile_page.dart';
@@ -21,39 +30,20 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
+
   TaskBloc? _taskBloc;
+  BeatBloc? _beatBloc;
+  ProfileBloc? _profileBloc;
+  StreakBloc? _streakBloc;
 
-  static const List<String> _titles = [
-    'Home',
-    'Beats',
-    'Add',
-    'Streak',
-    'Profile',
+  static const _pages = [
+    HomePage(),
+    BeatsPage(),
+    StreakPage(),
+    ProfilePage(),
   ];
 
-  static final List<Widget> _pages = [
-    const HomePage(),
-    const BeatsPage(),
-    const SizedBox.shrink(),
-    const StreakPage(),
-    const ProfilePage(),
-  ];
-
-  static const List<IconData> _icons = [
-    Icons.home,
-    Icons.calendar_today,
-    Icons.add,
-    Icons.local_fire_department,
-    Icons.person,
-  ];
-
-  static const List<String> _labels = [
-    'Home',
-    'Beats',
-    '',
-    'Streak',
-    'Profile',
-  ];
+  static const _tabLabels = ['Home', 'Beats', 'Streaks', 'Profile'];
 
   @override
   void didChangeDependencies() {
@@ -61,27 +51,35 @@ class _MainShellState extends State<MainShell> {
     if (_taskBloc == null) {
       final client = GraphQLProvider.of(context).value;
       _taskBloc = TaskBloc(taskService: TaskService(client: client));
+      _beatBloc = BeatBloc(beatService: BeatService(client: client))
+        ..add(const BeatsLoadRequested());
+      _profileBloc = ProfileBloc(profileService: ProfileService(client: client))
+        ..add(const ProfileLoadRequested());
+      _streakBloc = StreakBloc(streakService: StreakService(client: client))
+        ..add(const StreakLoadRequested());
     }
   }
 
   @override
   void dispose() {
     _taskBloc?.close();
+    _beatBloc?.close();
+    _profileBloc?.close();
+    _streakBloc?.close();
     super.dispose();
   }
 
-  void _onItemTapped(int index) {
-    if (index == 2) {
-      AddTaskSheet.show(context, taskBloc: _taskBloc!);
-      return;
-    }
-    setState(() => _selectedIndex = index);
-  }
+  void _onTabTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _taskBloc!,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _taskBloc!),
+        BlocProvider.value(value: _beatBloc!),
+        BlocProvider.value(value: _profileBloc!),
+        BlocProvider.value(value: _streakBloc!),
+      ],
       child: BlocListener<TaskBloc, TaskState>(
         listener: (context, state) {
           if (state is TaskError) {
@@ -98,70 +96,75 @@ class _MainShellState extends State<MainShell> {
           }
         },
         child: Scaffold(
-          appBar: _selectedIndex == 4
-              ? null
-              : AppBar(
-                  title: Text(_titles[_selectedIndex]),
-                  bottom: const PreferredSize(
-                    preferredSize: Size.fromHeight(16),
-                    child: SizedBox(height: 16),
-                  ),
-                ),
+          backgroundColor: AppColors.bg,
           body: _pages[_selectedIndex],
-          bottomNavigationBar: Container(
-            height: 104,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              border: Border(
-                top: BorderSide(color: Colors.grey.shade300, width: 0.5),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_icons.length, (index) {
-                final isSelected = _selectedIndex == index;
-                final isAddIcon = index == 2;
-                final iconColor = isSelected || isAddIcon
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey;
-                final baseIconSize = isAddIcon ? 40.0 : 28.0;
-                final iconSize = isSelected && !isAddIcon
-                    ? baseIconSize + 6
-                    : baseIconSize;
+          bottomNavigationBar: _buildTabBar(context),
+        ),
+      ),
+    );
+  }
 
-                return GestureDetector(
-                  onTap: () => _onItemTapped(index),
-                  child: SizedBox(
-                    width: 60,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(_icons[index], color: iconColor, size: iconSize),
-                        const SizedBox(height: 4),
-                        if (isSelected && !isAddIcon)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          )
-                        else if (_labels[index].isNotEmpty)
-                          Text(
-                            _labels[index],
-                            style: TextStyle(color: iconColor, fontSize: 12),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ),
+  Widget _buildTabBar(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.bg,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(4, (i) => _buildTab(i)),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildTab(int index) {
+    final active = _selectedIndex == index;
+    final color = active ? AppColors.violet : AppColors.subtle;
+    return GestureDetector(
+      onTap: () => _onTabTapped(index),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _TabIcon(index: index, active: active, color: color),
+            const SizedBox(height: 3),
+            Text(
+              _tabLabels[index],
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabIcon extends StatelessWidget {
+  const _TabIcon({required this.index, required this.active, required this.color});
+  final int index;
+  final bool active;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final icons = [
+      Icons.home_rounded,
+      Icons.access_time_rounded,
+      Icons.local_fire_department_rounded,
+      Icons.person_rounded,
+    ];
+    return Icon(icons[index], color: color, size: 22);
   }
 }

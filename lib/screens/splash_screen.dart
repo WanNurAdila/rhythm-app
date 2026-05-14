@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../theme/app_theme.dart';
+import '../widgets/design_system.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -15,16 +18,13 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(milliseconds: 900), _handleNavigation);
+    Timer(const Duration(milliseconds: 1200), _handleNavigation);
   }
 
   Future<void> _handleNavigation() async {
     final session = Supabase.instance.client.auth.currentSession;
-    final hasSession = session != null;
-
     if (!mounted) return;
-
-    if (hasSession) {
+    if (session != null) {
       context.go('/home');
     } else {
       context.go('/login');
@@ -33,16 +33,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
+      backgroundColor: AppColors.bg,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Welcome to Rhythm App'),
-          ],
-        ),
+        child: BrandPulseMark(size: 80),
       ),
     );
   }

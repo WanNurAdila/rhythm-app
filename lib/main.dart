@@ -6,6 +6,7 @@ import 'package:toastification/toastification.dart';
 
 import 'navigation/app_router.dart';
 import 'repositories/auth_repository.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,65 +57,9 @@ class MyApp extends StatelessWidget {
 
     return ToastificationWrapper(
       child: MaterialApp.router(
-      title: 'Rhythm App',
-      routerConfig: router,
-      theme: ThemeData.dark().copyWith(
-        primaryColor: const Color(0xFF8B7CF6),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B7CF6),
-          brightness: Brightness.dark,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white12,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF8B7CF6)),
-          ),
-          labelStyle: const TextStyle(color: Colors.white70),
-          hintStyle: const TextStyle(color: Colors.white54),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF8B7CF6),
-            foregroundColor: Colors.white,
-            textStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF8B7CF6),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF171513),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF171513),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-      ),
+        title: 'Rhythm',
+        routerConfig: router,
+        theme: buildAppTheme(),
       ),
     );
   }

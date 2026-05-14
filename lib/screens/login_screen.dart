@@ -4,16 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../blocs/authentication/authentication_bloc.dart';
 import '../blocs/authentication/authentication_state.dart';
 import '../repositories/auth_repository.dart';
+import '../theme/app_theme.dart';
 import '../widgets/authentication_form.dart';
+import '../widgets/design_system.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key, required this.authRepository});
 
   final AuthRepository authRepository;
-
-  Future<void> _handleLoginSuccess(BuildContext context) async {
-    context.go('/home');
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,71 +20,61 @@ class LoginScreen extends StatelessWidget {
       child: BlocListener<AuthenticationBloc, AuthenticationState>(
         listener: (context, state) {
           if (state.status == AuthenticationStatus.success) {
-            _handleLoginSuccess(context);
+            context.go('/home');
           }
         },
-        child: Scaffold(
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  const SizedBox(height: 40),
-                  Container(
-                    height: 80,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white12,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.music_note,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Rhythm',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Flow through your day',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.75),
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                  const AuthenticationForm(),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Don't have an account? ",
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                      TextButton(
-                        onPressed: () => context.go('/register'),
-                        child: const Text('Register'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+        child: const Scaffold(
+          backgroundColor: AppColors.bg,
+          body: SafeArea(child: _LoginBody()),
         ),
       ),
     );
   }
 }
+
+class _LoginBody extends StatelessWidget {
+  const _LoginBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          const BrandPulseMark(size: 68),
+          const SizedBox(height: 24),
+          Text(
+            'Rhythm',
+            style: displayText(44),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Flow through your day.',
+            style: TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 0.1),
+          ),
+          const SizedBox(height: 56),
+          const AuthenticationForm(),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'No account? ',
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+              GestureDetector(
+                onTap: () => context.go('/register'),
+                child: const Text(
+                  'Register',
+                  style: TextStyle(fontSize: 13, color: AppColors.violetBright, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
