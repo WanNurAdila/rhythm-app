@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/wanadila/Github-Repo/Personal/rhythm_app/assets/icon)",
+      "Bash(cp /Users/wanadila/Github-Repo/Personal/rhythm_app/assets/rhythm_icon-1024.png /Users/wanadila/Github-Repo/Personal/rhythm_app/assets/icon/icon-1024.png)",
+      "Bash(flutter pub *)",
+      "Bash(dart run *)",
+      "Bash(dart analyze *)"
+    ]
+  }
+}
