@@ -34,6 +34,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     try {
       final profile = await _profileService.updateProfile(
         displayName: event.displayName,
+        gender: event.gender,
+        pronouns: event.pronouns,
+        timezone: event.timezone,
       );
       emit(ProfileLoaded(profile: profile));
     } catch (error) {

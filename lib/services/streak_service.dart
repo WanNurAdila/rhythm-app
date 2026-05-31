@@ -2,30 +2,48 @@ import 'package:graphql_flutter/graphql_flutter.dart';
 import '../models/beat_completion.dart';
 import '../models/streak.dart';
 
-const _streakFields = '''
-  id
-  user_id
-  current_streak
-  longest_streak
-  last_active_date
-''';
-
-const _completionFields = '''
-  id
-  user_id
-  beat_id
-  completed_date
-  tasks_total
-  tasks_done
-''';
-
 const _getStreakQuery = '''
   query GetStreak(\$userId: UUID!) {
-    streaksCollection(filter: { user_id: { eq: \$userId } }) {
+    streaksCollection(
+      filter: { user_id: { eq: \$userId } }
+      first: 1
+    ) {
       edges {
         node {
-          $_streakFields
+          id
+          user_id
+          current_streak
+          longest_streak
+          last_active_date
+          updated_at
         }
+      }
+    }
+  }
+''';
+
+const _updateStreakMutation = '''
+  mutation UpdateStreak(
+    \$userId: UUID!
+    \$currentStreak: Int!
+    \$longestStreak: Int!
+    \$lastActiveDate: Date!
+    \$updatedAt: Datetime!
+  ) {
+    updatestreaksCollection(
+      filter: { user_id: { eq: \$userId } }
+      set: {
+        current_streak: \$currentStreak
+        longest_streak: \$longestStreak
+        last_active_date: \$lastActiveDate
+        updated_at: \$updatedAt
+      }
+    ) {
+      records {
+        id
+        current_streak
+        longest_streak
+        last_active_date
       }
     }
   }
@@ -42,8 +60,47 @@ const _getCompletionsQuery = '''
     ) {
       edges {
         node {
-          $_completionFields
+          id
+          beat_id
+          completed_date
+          tasks_total
+          tasks_done
         }
+      }
+    }
+  }
+''';
+
+const _checkBeatCompletionQuery = '''
+  query CheckBeatCompletion(\$userId: UUID!, \$beatId: UUID!, \$completedDate: Date!) {
+    beatCompletionsCollection(
+      filter: {
+        user_id: { eq: \$userId }
+        beat_id: { eq: \$beatId }
+        completed_date: { eq: \$completedDate }
+      }
+      first: 1
+    ) {
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+''';
+
+const _deleteBeatCompletionMutation = '''
+  mutation DeleteBeatCompletion(\$userId: UUID!, \$beatId: UUID!, \$completedDate: Date!) {
+    deleteFrombeatCompletionsCollection(
+      filter: {
+        user_id: { eq: \$userId }
+        beat_id: { eq: \$beatId }
+        completed_date: { eq: \$completedDate }
+      }
+    ) {
+      records {
+        id
       }
     }
   }
@@ -57,7 +114,7 @@ const _recordCompletionMutation = '''
     \$tasksTotal: Int!
     \$tasksDone: Int!
   ) {
-    insertIntoBeatCompletionsCollection(objects: [{
+    insertIntobeatCompletionsCollection(objects: [{
       user_id: \$userId
       beat_id: \$beatId
       completed_date: \$completedDate
@@ -65,49 +122,11 @@ const _recordCompletionMutation = '''
       tasks_done: \$tasksDone
     }]) {
       records {
-        $_completionFields
-      }
-    }
-  }
-''';
-
-const _updateStreakMutation = '''
-  mutation UpdateStreak(
-    \$userId: UUID!
-    \$currentStreak: Int!
-    \$longestStreak: Int!
-    \$lastActiveDate: Date!
-  ) {
-    updateStreaksCollection(
-      filter: { user_id: { eq: \$userId } }
-      set: {
-        current_streak: \$currentStreak
-        longest_streak: \$longestStreak
-        last_active_date: \$lastActiveDate
-      }
-    ) {
-      records {
-        $_streakFields
-      }
-    }
-  }
-''';
-
-const _insertStreakMutation = '''
-  mutation InsertStreak(
-    \$userId: UUID!
-    \$currentStreak: Int!
-    \$longestStreak: Int!
-    \$lastActiveDate: Date!
-  ) {
-    insertIntoStreaksCollection(objects: [{
-      user_id: \$userId
-      current_streak: \$currentStreak
-      longest_streak: \$longestStreak
-      last_active_date: \$lastActiveDate
-    }]) {
-      records {
-        $_streakFields
+        id
+        beat_id
+        completed_date
+        tasks_total
+        tasks_done
       }
     }
   }
@@ -135,6 +154,28 @@ class StreakService {
     return Streak.fromJson(edges.first['node'] as Map<String, dynamic>);
   }
 
+  Future<void> updateStreak({
+    required String userId,
+    required int currentStreak,
+    required int longestStreak,
+    required DateTime lastActiveDate,
+  }) async {
+    final result = await _client.mutate(
+      MutationOptions(
+        document: gql(_updateStreakMutation),
+        variables: {
+          'userId': userId,
+          'currentStreak': currentStreak,
+          'longestStreak': longestStreak,
+          'lastActiveDate': _formatDate(lastActiveDate),
+          'updatedAt': DateTime.now().toUtc().toIso8601String(),
+        },
+      ),
+    );
+
+    _checkErrors(result);
+  }
+
   Future<List<BeatCompletion>> getBeatCompletions(
     String userId,
     DateTime fromDate,
@@ -159,6 +200,49 @@ class StreakService {
         .toList();
   }
 
+  Future<bool> beatCompletionExists({
+    required String userId,
+    required String beatId,
+    required DateTime date,
+  }) async {
+    final result = await _client.query(
+      QueryOptions(
+        document: gql(_checkBeatCompletionQuery),
+        variables: {
+          'userId': userId,
+          'beatId': beatId,
+          'completedDate': _formatDate(date),
+        },
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
+    );
+
+    _checkErrors(result);
+
+    final edges =
+        result.data!['beatCompletionsCollection']['edges'] as List<dynamic>;
+    return edges.isNotEmpty;
+  }
+
+  Future<void> deleteBeatCompletion({
+    required String userId,
+    required String beatId,
+    required DateTime date,
+  }) async {
+    final result = await _client.mutate(
+      MutationOptions(
+        document: gql(_deleteBeatCompletionMutation),
+        variables: {
+          'userId': userId,
+          'beatId': beatId,
+          'completedDate': _formatDate(date),
+        },
+      ),
+    );
+
+    _checkErrors(result);
+  }
+
   Future<BeatCompletion> recordBeatCompletion({
     required String userId,
     required String beatId,
@@ -181,54 +265,10 @@ class StreakService {
 
     _checkErrors(result);
 
-    final record = (result.data!['insertIntoBeatCompletionsCollection']
+    final record = (result.data!['insertIntobeatCompletionsCollection']
             ['records'] as List)
         .first as Map<String, dynamic>;
     return BeatCompletion.fromJson(record);
-  }
-
-  // Tries update first; inserts if the user has no streak row yet.
-  Future<Streak> upsertStreak({
-    required String userId,
-    required int currentStreak,
-    required int longestStreak,
-    required DateTime lastActiveDate,
-  }) async {
-    final variables = {
-      'userId': userId,
-      'currentStreak': currentStreak,
-      'longestStreak': longestStreak,
-      'lastActiveDate': _formatDate(lastActiveDate),
-    };
-
-    final updateResult = await _client.mutate(
-      MutationOptions(
-        document: gql(_updateStreakMutation),
-        variables: variables,
-      ),
-    );
-    _checkErrors(updateResult);
-
-    final updated = updateResult.data!['updateStreaksCollection']['records']
-        as List<dynamic>;
-
-    if (updated.isNotEmpty) {
-      return Streak.fromJson(updated.first as Map<String, dynamic>);
-    }
-
-    // No existing row — insert.
-    final insertResult = await _client.mutate(
-      MutationOptions(
-        document: gql(_insertStreakMutation),
-        variables: variables,
-      ),
-    );
-    _checkErrors(insertResult);
-
-    final inserted = (insertResult.data!['insertIntoStreaksCollection']
-            ['records'] as List)
-        .first as Map<String, dynamic>;
-    return Streak.fromJson(inserted);
   }
 
   String _formatDate(DateTime date) =>

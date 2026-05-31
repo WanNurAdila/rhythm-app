@@ -42,10 +42,10 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     }
 
     try {
-      final sessionId = await _focusService.startSession(
+      final session = await _focusService.startSession(
         userId: userId,
         taskId: event.task.id,
-        beat: event.task.beat,
+        beatId: event.task.beatId,
       );
 
       await _focusModeService.enable();
@@ -56,7 +56,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
 
       emit(FocusActive(
         task: event.task,
-        sessionId: sessionId,
+        sessionId: session.id,
         remainingSeconds: totalSeconds,
         totalSeconds: totalSeconds,
       ));
@@ -91,7 +91,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     try {
       await Future.wait([
         _focusService.endSession(
-          sessionId: active.sessionId,
+          id: active.sessionId,
           durationSeconds: focusedSeconds,
           completed: true,
         ),
@@ -116,7 +116,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     if (active is FocusActive) {
       try {
         await _focusService.endSession(
-          sessionId: active.sessionId,
+          id: active.sessionId,
           durationSeconds: active.totalSeconds - active.remainingSeconds,
           completed: false,
         );

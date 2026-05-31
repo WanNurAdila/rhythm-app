@@ -12,7 +12,7 @@ class AppRouter {
           routes: <GoRoute>[
             GoRoute(
               path: '/',
-              builder: (context, state) => const SplashScreen(),
+              builder: (context, state) => SplashScreen(authRepository: authRepository),
             ),
             GoRoute(
               path: '/login',

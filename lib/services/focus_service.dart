@@ -1,20 +1,27 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
+import '../models/focus_session.dart';
 
 const _startSessionMutation = '''
   mutation StartFocusSession(
     \$userId: UUID!
     \$taskId: UUID!
-    \$beat: String!
+    \$beatId: UUID!
     \$startedAt: Datetime!
   ) {
-    insertIntoFocusSessionsCollection(objects: [{
+    insertIntofocusSessionsCollection(objects: [{
       user_id: \$userId
       task_id: \$taskId
-      beat: \$beat
+      beat_id: \$beatId
       started_at: \$startedAt
+      completed: false
     }]) {
       records {
         id
+        user_id
+        task_id
+        beat_id
+        started_at
+        completed
       }
     }
   }
@@ -27,7 +34,7 @@ const _endSessionMutation = '''
     \$durationSeconds: Int!
     \$completed: Boolean!
   ) {
-    updateFocusSessionsCollection(
+    updatefocusSessionsCollection(
       filter: { id: { eq: \$id } }
       set: {
         ended_at: \$endedAt
@@ -50,10 +57,10 @@ class FocusService {
 
   final GraphQLClient _client;
 
-  Future<String> startSession({
+  Future<FocusSession> startSession({
     required String userId,
     required String taskId,
-    required String beat,
+    required String beatId,
   }) async {
     final result = await _client.mutate(
       MutationOptions(
@@ -61,7 +68,7 @@ class FocusService {
         variables: {
           'userId': userId,
           'taskId': taskId,
-          'beat': beat,
+          'beatId': beatId,
           'startedAt': DateTime.now().toUtc().toIso8601String(),
         },
       ),
@@ -69,14 +76,14 @@ class FocusService {
 
     _checkErrors(result);
 
-    final record = (result.data!['insertIntoFocusSessionsCollection']['records']
-        as List)
-        .first as Map<String, dynamic>;
-    return record['id'] as String;
+    final record =
+        (result.data!['insertIntofocusSessionsCollection']['records'] as List)
+            .first as Map<String, dynamic>;
+    return FocusSession.fromJson(record);
   }
 
   Future<void> endSession({
-    required String sessionId,
+    required String id,
     required int durationSeconds,
     required bool completed,
   }) async {
@@ -84,7 +91,7 @@ class FocusService {
       MutationOptions(
         document: gql(_endSessionMutation),
         variables: {
-          'id': sessionId,
+          'id': id,
           'endedAt': DateTime.now().toUtc().toIso8601String(),
           'durationSeconds': durationSeconds,
           'completed': completed,

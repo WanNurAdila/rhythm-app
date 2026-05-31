@@ -14,11 +14,15 @@ class TaskLoading extends TaskState {
 
 class TaskLoaded extends TaskState {
   final List<Task> tasks;
+  final int? completedCount;
 
-  const TaskLoaded({required this.tasks});
+  const TaskLoaded({required this.tasks, this.completedCount});
 
-  TaskLoaded copyWith({List<Task>? tasks}) {
-    return TaskLoaded(tasks: tasks ?? this.tasks);
+  TaskLoaded copyWith({List<Task>? tasks, int? completedCount}) {
+    return TaskLoaded(
+      tasks: tasks ?? this.tasks,
+      completedCount: completedCount ?? this.completedCount,
+    );
   }
 }
 

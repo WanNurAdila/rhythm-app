@@ -1,33 +1,58 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile.dart';
+export '../models/profile.dart' show Gender;
 
-const _profileFields = '''
-  id
-  display_name
-  created_at
-''';
-
-const _getProfileQuery = '''
-  query GetProfile(\$id: UUID!) {
-    profilesCollection(filter: { id: { eq: \$id } }) {
+const _getProfileQuery = r'''
+  query GetProfile($id: UUID!) {
+    profilesCollection(
+      filter: { id: { eq: $id } }
+      first: 1
+    ) {
       edges {
         node {
-          $_profileFields
+          id
+          display_name
+          email
+          gender
+          pronouns
+          timezone
+          created_at
+          updated_at
         }
       }
     }
   }
 ''';
 
-const _updateProfileMutation = '''
-  mutation UpdateProfile(\$id: UUID!, \$displayName: String!) {
-    updateProfilesCollection(
-      filter: { id: { eq: \$id } }
-      set: { display_name: \$displayName }
+const _updateProfile = r'''
+  mutation UpdateProfile(
+    $id:          UUID!
+    $displayName: String!
+    $email:       String
+    $gender:      opaque
+    $pronouns:    String
+    $timezone:    String
+  ) {
+    updateprofilesCollection(
+      filter: { id: { eq: $id } }
+      set: {
+        display_name: $displayName
+        email:        $email
+        gender:       $gender
+        pronouns:     $pronouns
+        timezone:     $timezone
+      }
     ) {
       records {
-        $_profileFields
+        id
+        display_name
+        email
+        gender
+        pronouns
+        timezone
+        created_at
+        updated_at
       }
     }
   }
@@ -58,31 +83,39 @@ class ProfileService {
 
     return Profile.fromJson(
       edges.first['node'] as Map<String, dynamic>,
-      email: user.email ?? '',
     );
   }
 
-  Future<Profile> updateProfile({required String displayName}) async {
+  Future<Profile> updateProfile({
+    required String displayName,
+    Gender? gender,
+    String? pronouns,
+    String? timezone,
+  }) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception('User not authenticated.');
 
     final result = await _client.mutate(
       MutationOptions(
-        document: gql(_updateProfileMutation),
-        variables: {'id': user.id, 'displayName': displayName},
+        document: gql(_updateProfile),
+        variables: {
+          'id': user.id,
+          'displayName': displayName,
+          'email': user.email,
+          'gender': gender?.name,
+          'pronouns': pronouns,
+          'timezone': timezone,
+        },
       ),
     );
 
     _checkErrors(result);
 
     final records =
-        result.data!['updateProfilesCollection']['records'] as List<dynamic>;
+        result.data!['updateprofilesCollection']['records'] as List<dynamic>;
     if (records.isEmpty) throw Exception('Profile update failed.');
 
-    return Profile.fromJson(
-      records.first as Map<String, dynamic>,
-      email: user.email ?? '',
-    );
+    return Profile.fromJson(records.first as Map<String, dynamic>);
   }
 
   void _checkErrors(QueryResult result) {

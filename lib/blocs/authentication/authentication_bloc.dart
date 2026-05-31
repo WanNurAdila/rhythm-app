@@ -13,6 +13,7 @@ class AuthenticationBloc extends Bloc<AuthenticationEvent, AuthenticationState> 
     on<AuthenticationRegisterSubmitted>(_onRegisterSubmitted);
     on<AuthenticationLoginSubmitted>(_onLoginSubmitted);
     on<AuthenticationLogoutRequested>(_onLogoutRequested);
+    on<AuthenticationTokenValidationRequested>(_onTokenValidationRequested);
   }
 
   final AuthRepository _authRepository;
@@ -104,6 +105,20 @@ class AuthenticationBloc extends Bloc<AuthenticationEvent, AuthenticationState> 
       emit(state.copyWith(
         status: AuthenticationStatus.failure,
         errorMessage: error.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onTokenValidationRequested(
+    AuthenticationTokenValidationRequested event,
+    Emitter<AuthenticationState> emit,
+  ) async {
+    final isValid = await _authRepository.isTokenValid();
+    if (!isValid) {
+      await _authRepository.logout();
+      emit(const AuthenticationState(
+        status: AuthenticationStatus.initial,
+        isAuthenticated: false,
       ));
     }
   }

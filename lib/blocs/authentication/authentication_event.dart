@@ -31,3 +31,7 @@ class AuthenticationLoginSubmitted extends AuthenticationEvent {
 class AuthenticationLogoutRequested extends AuthenticationEvent {
   const AuthenticationLogoutRequested();
 }
+
+class AuthenticationTokenValidationRequested extends AuthenticationEvent {
+  const AuthenticationTokenValidationRequested();
+}

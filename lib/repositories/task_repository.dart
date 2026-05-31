@@ -23,7 +23,7 @@ class TaskRepository {
   Future<Task> addTask({
     required String name,
     required String beat,
-    required String energy,
+    required String priority,
     required int durationMinutes,
   }) async {
     final userId = _client.auth.currentUser?.id;
@@ -35,7 +35,7 @@ class TaskRepository {
           'user_id': userId,
           'name': name,
           'beat': beat,
-          'energy': energy,
+          'priority': priority,
           'duration_minutes': durationMinutes,
           'is_completed': false,
         })

@@ -6,6 +6,7 @@ import 'package:toastification/toastification.dart';
 
 import 'navigation/app_router.dart';
 import 'repositories/auth_repository.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -24,6 +25,7 @@ Future<void> main() async {
   }
 
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  await NotificationService.instance.init();
 
   final httpLink = HttpLink(
     graphqlUrl,

@@ -5,13 +5,17 @@ import 'package:toastification/toastification.dart';
 
 import '../blocs/beat/beat_bloc.dart';
 import '../blocs/beat/beat_event.dart';
+import '../blocs/focus/focus_bloc.dart';
 import '../blocs/profile/profile_bloc.dart';
 import '../blocs/profile/profile_event.dart';
 import '../blocs/streak/streak_bloc.dart';
 import '../blocs/streak/streak_event.dart';
 import '../blocs/task/task_bloc.dart';
+import '../blocs/task/task_event.dart';
 import '../blocs/task/task_state.dart';
 import '../services/beat_service.dart';
+import '../services/focus_mode_service.dart';
+import '../services/focus_service.dart';
 import '../services/profile_service.dart';
 import '../services/streak_service.dart';
 import '../services/task_service.dart';
@@ -35,6 +39,7 @@ class _MainShellState extends State<MainShell> {
   BeatBloc? _beatBloc;
   ProfileBloc? _profileBloc;
   StreakBloc? _streakBloc;
+  FocusBloc? _focusBloc;
 
   static const _pages = [
     HomePage(),
@@ -50,13 +55,24 @@ class _MainShellState extends State<MainShell> {
     super.didChangeDependencies();
     if (_taskBloc == null) {
       final client = GraphQLProvider.of(context).value;
-      _taskBloc = TaskBloc(taskService: TaskService(client: client));
+      final taskService = TaskService(client: client);
+      final streakService = StreakService(client: client);
+      _streakBloc = StreakBloc(streakService: streakService)
+        ..add(const StreakLoadRequested());
+      _taskBloc = TaskBloc(
+        taskService: taskService,
+        streakService: streakService,
+        streakBloc: _streakBloc!,
+      )..add(const CompletedCountLoadRequested());
       _beatBloc = BeatBloc(beatService: BeatService(client: client))
         ..add(const BeatsLoadRequested());
       _profileBloc = ProfileBloc(profileService: ProfileService(client: client))
         ..add(const ProfileLoadRequested());
-      _streakBloc = StreakBloc(streakService: StreakService(client: client))
-        ..add(const StreakLoadRequested());
+      _focusBloc = FocusBloc(
+        focusService: FocusService(client: client),
+        taskService: taskService,
+        focusModeService: FocusModeService(),
+      );
     }
   }
 
@@ -66,6 +82,7 @@ class _MainShellState extends State<MainShell> {
     _beatBloc?.close();
     _profileBloc?.close();
     _streakBloc?.close();
+    _focusBloc?.close();
     super.dispose();
   }
 
@@ -79,6 +96,7 @@ class _MainShellState extends State<MainShell> {
         BlocProvider.value(value: _beatBloc!),
         BlocProvider.value(value: _profileBloc!),
         BlocProvider.value(value: _streakBloc!),
+        BlocProvider.value(value: _focusBloc!),
       ],
       child: BlocListener<TaskBloc, TaskState>(
         listener: (context, state) {

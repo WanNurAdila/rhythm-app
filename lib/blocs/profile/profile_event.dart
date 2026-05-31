@@ -1,3 +1,5 @@
+import '../../models/profile.dart';
+
 abstract class ProfileEvent {
   const ProfileEvent();
 }
@@ -7,7 +9,15 @@ class ProfileLoadRequested extends ProfileEvent {
 }
 
 class ProfileUpdateRequested extends ProfileEvent {
-  final String displayName;
+  const ProfileUpdateRequested({
+    required this.displayName,
+    this.gender,
+    this.pronouns,
+    this.timezone,
+  });
 
-  const ProfileUpdateRequested(this.displayName);
+  final String displayName;
+  final Gender? gender;
+  final String? pronouns;
+  final String? timezone;
 }

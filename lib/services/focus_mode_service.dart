@@ -10,15 +10,15 @@ class FocusModeService {
   Future<void> enable() async {
     try {
       await _channel.invokeMethod<void>('enable');
-    } on PlatformException {
-      // DND permission not granted — proceed without it.
+    } on Exception {
+      // DND permission not granted or channel not implemented — proceed without it.
     }
   }
 
   Future<void> disable() async {
     try {
       await _channel.invokeMethod<void>('disable');
-    } on PlatformException {
+    } on Exception {
       // Silently ignore — disabling should never block the user.
     }
   }

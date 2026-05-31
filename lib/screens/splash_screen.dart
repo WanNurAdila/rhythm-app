@@ -2,13 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../repositories/auth_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/design_system.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  const SplashScreen({super.key, required this.authRepository});
+
+  final AuthRepository authRepository;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -22,9 +24,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _handleNavigation() async {
-    final session = Supabase.instance.client.auth.currentSession;
+    final isValid = await widget.authRepository.isTokenValid();
     if (!mounted) return;
-    if (session != null) {
+    if (isValid) {
       context.go('/home');
     } else {
       context.go('/login');

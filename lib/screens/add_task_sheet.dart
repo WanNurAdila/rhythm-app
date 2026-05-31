@@ -15,7 +15,11 @@ class AddTaskSheet extends StatefulWidget {
 
   final String? defaultBeat;
 
-  static void show(BuildContext context, {required TaskBloc taskBloc, String? defaultBeat}) {
+  static void show(
+    BuildContext context, {
+    required TaskBloc taskBloc,
+    String? defaultBeat,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -38,7 +42,7 @@ class AddTaskSheet extends StatefulWidget {
 
 class _AddTaskSheetState extends State<AddTaskSheet> {
   String? selectedBeat;
-  String? selectedEnergy;
+  String? selectedPriority;
   String? selectedDuration;
   String? _errorMessage;
   bool _isSubmitting = false;
@@ -59,23 +63,35 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   void _submit() {
     setState(() => _errorMessage = null);
     final title = _taskNameController.text.trim();
-    if (title.isEmpty) { setState(() => _errorMessage = 'Please enter a task name.'); return; }
-    if (selectedBeat == null) { setState(() => _errorMessage = 'Please select a beat.'); return; }
-    if (selectedEnergy == null) { setState(() => _errorMessage = 'Please select an energy level.'); return; }
+    if (title.isEmpty) {
+      setState(() => _errorMessage = 'Please enter a task name.');
+      return;
+    }
+    if (selectedBeat == null) {
+      setState(() => _errorMessage = 'Please select a beat.');
+      return;
+    }
+    if (selectedPriority == null) {
+      setState(() => _errorMessage = 'Please select an energy level.');
+      return;
+    }
 
-    final energy = selectedEnergy!.toLowerCase();
+    final priority = selectedPriority!.toLowerCase();
     final durationMinutes = selectedDuration != null
-        ? int.tryParse(selectedDuration!.replaceAll(RegExp(r'[^0-9]'), '')) ?? defaultDuration(energy)
-        : defaultDuration(energy);
+        ? int.tryParse(selectedDuration!.replaceAll(RegExp(r'[^0-9]'), '')) ??
+              defaultDuration(priority)
+        : defaultDuration(priority);
 
     setState(() => _isSubmitting = true);
-    context.read<TaskBloc>().add(TaskAddRequested(
-      beat: selectedBeat!,
-      title: title,
-      energy: energy,
-      durationMinutes: durationMinutes,
-      scheduledDate: DateTime.now(),
-    ));
+    context.read<TaskBloc>().add(
+      TaskAddRequested(
+        beatId: selectedBeat!,
+        title: title,
+        priority: priority,
+        durationMinutes: durationMinutes,
+        scheduledDate: DateTime.now(),
+      ),
+    );
   }
 
   @override
@@ -120,7 +136,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             const Center(
               child: Text(
                 'New task',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.text, letterSpacing: -0.4),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.text,
+                  letterSpacing: -0.4,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -129,7 +150,9 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             TextField(
               controller: _taskNameController,
               style: const TextStyle(color: AppColors.text, fontSize: 14),
-              decoration: const InputDecoration(hintText: "What's on your mind?"),
+              decoration: const InputDecoration(
+                hintText: "What's on your mind?",
+              ),
               autofocus: true,
             ),
             const SizedBox(height: 14),
@@ -141,42 +164,51 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             ),
             const SizedBox(height: 14),
 
-            const InputLabel('Energy level'),
+            const InputLabel('Priority'),
             Row(
-              children: ['Low', 'Medium', 'High'].map((e) => Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: e != 'High' ? 6 : 0),
-                  child: SelectorChip(
-                    label: e,
-                    selected: selectedEnergy == e,
-                    onTap: () => setState(() {
-                      selectedEnergy = e;
-                      final energy = e.toLowerCase();
-                      selectedDuration = '${defaultDuration(energy)} min';
-                    }),
-                  ),
-                ),
-              )).toList(),
+              children: ['Low', 'Medium', 'High']
+                  .map(
+                    (e) => Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: e != 'High' ? 6 : 0),
+                        child: SelectorChip(
+                          label: e,
+                          selected: selectedPriority == e,
+                          onTap: () => setState(() {
+                            selectedPriority = e;
+                          }),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
             const SizedBox(height: 14),
 
             const InputLabel('Duration'),
             Row(
-              children: ['15 min', '30 min', '45 min', '60 min'].map((d) => Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: d != '60 min' ? 6 : 0),
-                  child: SelectorChip(
-                    label: d,
-                    selected: selectedDuration == d,
-                    onTap: () => setState(() => selectedDuration = d),
-                  ),
-                ),
-              )).toList(),
+              children: ['15 min', '30 min', '45 min', '60 min']
+                  .map(
+                    (d) => Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: d != '60 min' ? 6 : 0),
+                        child: SelectorChip(
+                          label: d,
+                          selected: selectedDuration == d,
+                          onTap: () => setState(() => selectedDuration = d),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
 
             if (_errorMessage != null) ...[
               const SizedBox(height: 10),
-              Text(_errorMessage!, style: const TextStyle(color: AppColors.hot, fontSize: 12)),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: AppColors.hot, fontSize: 12),
+              ),
             ],
             const SizedBox(height: 18),
 
@@ -192,7 +224,14 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         border: Border.all(color: AppColors.border),
                       ),
                       child: const Center(
-                        child: Text('Cancel', style: TextStyle(color: AppColors.muted, fontSize: 14, fontWeight: FontWeight.w500)),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -233,11 +272,15 @@ class _BeatChips extends StatelessWidget {
         return Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: beats.map((beat) => SelectorChip(
-            label: beat.name,
-            selected: selected == beat.name,
-            onTap: () => onSelected(beat.name),
-          )).toList(),
+          children: beats
+              .map(
+                (beat) => SelectorChip(
+                  label: beat.name,
+                  selected: selected == beat.id,
+                  onTap: () => onSelected(beat.id),
+                ),
+              )
+              .toList(),
         );
       },
     );
@@ -255,11 +298,15 @@ class _FallbackBeatChips extends StatelessWidget {
     return Wrap(
       spacing: 6,
       runSpacing: 6,
-      children: ['Morning', 'Deep Work', 'Evening'].map((b) => SelectorChip(
-        label: b,
-        selected: selected == b,
-        onTap: () => onSelected?.call(b),
-      )).toList(),
+      children: ['Morning', 'Deep Work', 'Evening']
+          .map(
+            (b) => SelectorChip(
+              label: b,
+              selected: selected == b,
+              onTap: () => onSelected?.call(b),
+            ),
+          )
+          .toList(),
     );
   }
 }

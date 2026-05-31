@@ -47,6 +47,11 @@ class _AuthenticationFormState extends State<AuthenticationForm>
                 style: const TextStyle(color: AppColors.text, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: '••••••••',
+                  errorText: (state.status == AuthenticationStatus.failure &&
+                          state.errorMessage != null &&
+                          state.errorMessage!.toLowerCase().contains('credential'))
+                      ? 'Invalid email or password.'
+                      : null,
                   suffixIcon: GestureDetector(
                     onTap: () => setState(() => _obscurePassword = !_obscurePassword),
                     child: Icon(
@@ -84,15 +89,6 @@ class _AuthenticationFormState extends State<AuthenticationForm>
                   }
                 },
               ),
-              if (state.status == AuthenticationStatus.failure && state.errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    state.errorMessage!,
-                    style: const TextStyle(color: AppColors.hot, fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
             ],
           ),
         );

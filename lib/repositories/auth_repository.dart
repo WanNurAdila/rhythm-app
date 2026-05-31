@@ -77,4 +77,27 @@ class AuthRepository {
   Future<void> clearStoredToken() async {
     await _secureStorage.delete(key: _tokenKey);
   }
+
+  Future<bool> isTokenValid() async {
+    final storedToken = await _secureStorage.read(key: _tokenKey);
+    if (storedToken == null) return false;
+
+    try {
+      final session = _client.auth.currentSession;
+      if (session == null) return false;
+
+      if (session.isExpired) {
+        final response = await _client.auth.refreshSession();
+        if (response.session == null) return false;
+        await _secureStorage.write(
+          key: _tokenKey,
+          value: response.session!.accessToken,
+        );
+      }
+
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../blocs/beat/beat_bloc.dart';
 import '../blocs/beat/beat_state.dart';
+import '../blocs/focus/focus_bloc.dart';
 import '../blocs/profile/profile_bloc.dart';
 import '../blocs/profile/profile_state.dart';
 import '../blocs/task/task_bloc.dart';
@@ -13,6 +14,7 @@ import '../models/task.dart';
 import '../theme/app_theme.dart';
 import '../widgets/design_system.dart';
 import 'add_task_sheet.dart';
+import 'focus_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -32,21 +34,78 @@ class _HomePageState extends State<HomePage> {
     return 'Good evening';
   }
 
+  Beat _beatForNow(List<Beat> active) {
+    if (active.isEmpty) return active.first;
+    final sorted = [...active]
+      ..sort((a, b) => _timeToMin(a.startTime).compareTo(_timeToMin(b.startTime)));
+    final nowMin = DateTime.now().hour * 60 + DateTime.now().minute;
+    for (int i = 0; i < sorted.length; i++) {
+      final startMin = _timeToMin(sorted[i].startTime);
+      final int endMin;
+      if (sorted[i].endTime != null) {
+        endMin = _timeToMin(sorted[i].endTime);
+      } else if (sorted[i].durationMinutes != null) {
+        endMin = startMin + sorted[i].durationMinutes!;
+      } else if (i + 1 < sorted.length) {
+        endMin = _timeToMin(sorted[i + 1].startTime);
+      } else {
+        endMin = 24 * 60;
+      }
+      if (nowMin >= startMin && nowMin < endMin) return sorted[i];
+    }
+    // Fallback: last beat that has already started
+    Beat? fallback;
+    for (final b in sorted) {
+      if (_timeToMin(b.startTime) <= nowMin) fallback = b;
+    }
+    return fallback ?? sorted.first;
+  }
+
   void _selectBeat(Beat beat) {
     setState(() => _selectedBeat = beat);
     context.read<TaskBloc>().add(
-      TasksLoadRequested(beat: beat.name, scheduledDate: DateTime.now()),
+      TasksLoadRequested(beatId: beat.id, scheduledDate: DateTime.now()),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initialLoadDone) return;
+    // BlocListener only fires on new emissions, not the current state.
+    // When this page is recreated (e.g. tab switch), BeatBloc may already be
+    // loaded — seed _selectedBeat immediately so the Add button works.
+    final beatState = context.read<BeatBloc>().state;
+    if (beatState is BeatLoaded && beatState.beats.isNotEmpty) {
+      _initialLoadDone = true;
+      final active = beatState.beats.where((b) => b.isActive).toList();
+      final initial = active.isNotEmpty ? _beatForNow(active) : beatState.beats.first;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _selectBeat(initial);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<BeatBloc, BeatState>(
       listener: (context, state) {
-        if (state is BeatLoaded && !_initialLoadDone && state.beats.isNotEmpty) {
+        if (state is! BeatLoaded || state.beats.isEmpty) return;
+        if (!_initialLoadDone) {
           _initialLoadDone = true;
-          final firstActive = state.beats.where((b) => b.isActive).firstOrNull ?? state.beats.first;
-          _selectBeat(firstActive);
+          final active = state.beats.where((b) => b.isActive).toList();
+          _selectBeat(active.isNotEmpty ? _beatForNow(active) : state.beats.first);
+          return;
+        }
+        // Re-sync _selectedBeat after beats are edited.
+        // A preset beat gets a new real UUID when activated, so match by type as fallback.
+        final current = _selectedBeat;
+        if (current == null) return;
+        final synced = state.beats.where((b) => b.id == current.id).firstOrNull
+            ?? state.beats.where((b) => b.type == current.type && b.isActive).firstOrNull
+            ?? state.beats.where((b) => b.isActive).firstOrNull;
+        if (synced != null && synced.id != current.id) {
+          _selectBeat(synced);
         }
       },
       child: SafeArea(
@@ -54,7 +113,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             _buildHeader(),
             _buildBeatChips(),
-            _buildEnergyCard(),
+            // _buildEnergyCard(),
             _buildTaskListHeader(context),
             Expanded(child: _buildTaskList()),
           ],
@@ -67,7 +126,6 @@ class _HomePageState extends State<HomePage> {
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
         final name = state is ProfileLoaded ? state.profile.displayName : '';
-        final initials = name.isNotEmpty ? initialsFrom(name) : '?';
         return Padding(
           padding: const EdgeInsets.fromLTRB(22, 24, 22, 12),
           child: Row(
@@ -89,7 +147,7 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              RhythmAvatar(size: 36, initials: initials),
+              RhythmAvatar(size: 36, seed: name),
             ],
           ),
         );
@@ -101,7 +159,8 @@ class _HomePageState extends State<HomePage> {
     return BlocBuilder<BeatBloc, BeatState>(
       builder: (context, state) {
         if (state is! BeatLoaded) return const SizedBox(height: 36);
-        final active = state.beats.where((b) => b.isActive).toList();
+        final active = state.beats.where((b) => b.isActive).toList()
+          ..sort((a, b) => _timeToMin(a.startTime).compareTo(_timeToMin(b.startTime)));
         return SizedBox(
           height: 36,
           child: ListView.separated(
@@ -111,7 +170,7 @@ class _HomePageState extends State<HomePage> {
             itemCount: active.length,
             itemBuilder: (_, i) {
               final beat = active[i];
-              final info = BeatInfo.forType(beat.type);
+              final info = BeatInfo.forBeat(beat);
               final selected = _selectedBeat?.id == beat.id;
               return GestureDetector(
                 onTap: () => _selectBeat(beat),
@@ -212,7 +271,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTaskListHeader(BuildContext context) {
-    final beatName = _selectedBeat != null ? '${BeatInfo.forType(_selectedBeat!.type).label} tasks' : 'Tasks';
+    final beatName = _selectedBeat != null ? '${BeatInfo.forBeat(_selectedBeat!).label} tasks' : 'Tasks';
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
       child: Row(
@@ -222,7 +281,7 @@ class _HomePageState extends State<HomePage> {
           GestureDetector(
             onTap: () {
               if (_selectedBeat != null) {
-                AddTaskSheet.show(context, taskBloc: context.read<TaskBloc>(), defaultBeat: _selectedBeat!.name);
+                AddTaskSheet.show(context, taskBloc: context.read<TaskBloc>(), defaultBeat: _selectedBeat!.id);
               }
             },
             child: Row(
@@ -276,29 +335,53 @@ class _TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final energyColor = switch (task.energy) {
-      TaskEnergy.low => AppColors.success,
-      TaskEnergy.medium => AppColors.warm,
-      TaskEnergy.high => AppColors.hot,
+    final energyColor = switch (task.priority) {
+      TaskPriority.low => AppColors.success,
+      TaskPriority.medium => AppColors.warm,
+      TaskPriority.high => AppColors.hot,
     };
-    final energyBg = switch (task.energy) {
-      TaskEnergy.low => AppColors.successSoft,
-      TaskEnergy.medium => AppColors.warmSoft,
-      TaskEnergy.high => AppColors.hotSoft,
+    final energyBg = switch (task.priority) {
+      TaskPriority.low => AppColors.successSoft,
+      TaskPriority.medium => AppColors.warmSoft,
+      TaskPriority.high => AppColors.hotSoft,
     };
-    final energyLabel = switch (task.energy) {
-      TaskEnergy.low => 'Low',
-      TaskEnergy.medium => 'Med',
-      TaskEnergy.high => 'High',
+    final energyLabel = switch (task.priority) {
+      TaskPriority.low => 'Low',
+      TaskPriority.medium => 'Med',
+      TaskPriority.high => 'High',
     };
 
-    return RhythmCard(
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => context.read<TaskBloc>().add(TaskCompleteRequested(task.id)),
-            child: AnimatedContainer(
+    return GestureDetector(
+      onTap: task.isCompleted
+          ? null
+          : () {
+              final focusBloc = context.read<FocusBloc>();
+              final taskBloc = context.read<TaskBloc>();
+              final beatState = context.read<BeatBloc>().state;
+              final beatName = beatState is BeatLoaded
+                  ? beatState.beats.where((b) => b.id == task.beatId).firstOrNull?.name
+                  : null;
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider.value(value: focusBloc),
+                      BlocProvider.value(value: taskBloc),
+                    ],
+                    child: FocusPage(task: task, beatName: beatName),
+                  ),
+                ),
+              ).then((_) {
+                if (context.mounted) {
+                  context.read<TaskBloc>().add(const TaskRefreshRequested());
+                }
+              });
+            },
+      child: RhythmCard(
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+        child: Row(
+          children: [
+            AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: 22,
               height: 22,
@@ -311,43 +394,50 @@ class _TaskCard extends StatelessWidget {
                   ? const Icon(Icons.check, size: 12, color: Colors.white)
                   : null,
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: task.isCompleted ? AppColors.subtle : AppColors.text,
-                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                    decorationColor: AppColors.subtle,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      color: task.isCompleted ? AppColors.subtle : AppColors.text,
+                      decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                      decorationColor: AppColors.subtle,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${task.durationMinutes} min',
-                  style: const TextStyle(fontSize: 11, color: AppColors.subtle),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    '${task.durationMinutes} min',
+                    style: const TextStyle(fontSize: 11, color: AppColors.subtle),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: energyBg,
-              borderRadius: BorderRadius.circular(999),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: energyBg,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                energyLabel,
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: energyColor),
+              ),
             ),
-            child: Text(
-              energyLabel,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: energyColor),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
+
+int _timeToMin(String? t) {
+  if (t == null) return 9999;
+  final p = t.split(':');
+  if (p.length < 2) return 0;
+  return (int.tryParse(p[0]) ?? 0) * 60 + (int.tryParse(p[1]) ?? 0);
 }

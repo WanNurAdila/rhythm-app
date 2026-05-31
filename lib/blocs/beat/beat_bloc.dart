@@ -11,6 +11,7 @@ class BeatBloc extends Bloc<BeatEvent, BeatState> {
         super(const BeatInitial()) {
     on<BeatsLoadRequested>(_onBeatsLoadRequested);
     on<BeatAddRequested>(_onBeatAddRequested);
+    on<BeatUpdateRequested>(_onBeatUpdateRequested);
     on<BeatToggleRequested>(_onBeatToggleRequested);
     on<BeatDeleteRequested>(_onBeatDeleteRequested);
   }
@@ -23,11 +24,36 @@ class BeatBloc extends Bloc<BeatEvent, BeatState> {
   ) async {
     emit(const BeatLoading());
     try {
-      final beats = await _beatService.getBeats();
-      emit(BeatLoaded(beats: beats));
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated.');
+      final apiBeats = await _beatService.getBeats(userId: userId);
+      emit(BeatLoaded(beats: _mergeWithPresets(apiBeats)));
     } catch (error) {
       emit(BeatError(message: error.toString()));
     }
+  }
+
+  List<Beat> _mergeWithPresets(List<Beat> apiBeats) {
+    final result = <Beat>[];
+    for (final def in presetBeatDefs) {
+      Beat? existing;
+      for (final b in apiBeats) {
+        if (b.type == def.type) { existing = b; break; }
+      }
+      result.add(existing ?? Beat(
+        id: presetId(def.type),
+        userId: '',
+        type: def.type,
+        name: def.name,
+        startTime: def.startTime,
+        isActive: false,
+        sortOrder: def.sortOrder,
+      ));
+    }
+    for (final b in apiBeats) {
+      if (!presetBeatDefs.any((d) => d.type == b.type)) result.add(b);
+    }
+    return result;
   }
 
   Future<void> _onBeatAddRequested(
@@ -40,18 +66,40 @@ class BeatBloc extends Bloc<BeatEvent, BeatState> {
       final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) throw Exception('User not authenticated.');
 
-      final beat = await _beatService.addBeat(
+      final beat = await _beatService.addCustomBeat(
         userId: userId,
-        type: event.type,
         name: event.name,
+        color: event.color,
         startTime: event.startTime,
-        durationMinutes: event.durationMinutes,
-        isActive: event.isActive,
+        endTime: event.endTime,
         sortOrder: event.sortOrder,
       );
 
       final existing = current is BeatLoaded ? current.beats : <Beat>[];
       emit(BeatLoaded(beats: [...existing, beat]));
+    } catch (error) {
+      emit(BeatError(message: error.toString()));
+    }
+  }
+
+  Future<void> _onBeatUpdateRequested(
+    BeatUpdateRequested event,
+    Emitter<BeatState> emit,
+  ) async {
+    final current = state;
+    if (current is! BeatLoaded) return;
+
+    try {
+      final beat = await _beatService.updateBeat(
+        id: event.id,
+        name: event.name,
+        color: event.color,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        isActive: event.isActive,
+      );
+      final beats = current.beats.map((b) => b.id == event.id ? beat : b).toList();
+      emit(current.copyWith(beats: beats));
     } catch (error) {
       emit(BeatError(message: error.toString()));
     }
@@ -65,12 +113,9 @@ class BeatBloc extends Bloc<BeatEvent, BeatState> {
     if (current is! BeatLoaded) return;
 
     try {
-      final updated = await _beatService.toggleBeat(
-        event.id,
-        isActive: event.isActive,
-      );
+      await _beatService.toggleBeat(event.id, isActive: event.isActive);
       final beats = current.beats
-          .map((b) => b.id == event.id ? updated : b)
+          .map((b) => b.id == event.id ? b.copyWith(isActive: event.isActive) : b)
           .toList();
       emit(current.copyWith(beats: beats));
     } catch (error) {

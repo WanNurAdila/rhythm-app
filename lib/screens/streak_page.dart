@@ -7,8 +7,19 @@ import '../blocs/streak/streak_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/design_system.dart';
 
-class StreakPage extends StatelessWidget {
+class StreakPage extends StatefulWidget {
   const StreakPage({super.key});
+
+  @override
+  State<StreakPage> createState() => _StreakPageState();
+}
+
+class _StreakPageState extends State<StreakPage> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<StreakBloc>().add(const StreakLoadRequested());
+  }
 
   @override
   Widget build(BuildContext context) {

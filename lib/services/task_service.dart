@@ -4,9 +4,9 @@ import '../models/task.dart';
 const _taskFields = '''
   id
   user_id
-  beat
+  beat_id
   title
-  energy
+  priority
   duration_minutes
   is_completed
   scheduled_date
@@ -15,10 +15,10 @@ const _taskFields = '''
 ''';
 
 const _getTasksQuery = '''
-  query GetTasks(\$beat: String!, \$scheduledDate: Date!) {
+  query GetTasks(\$beatId: UUID!, \$scheduledDate: Date!) {
     tasksCollection(
       filter: {
-        beat: { eq: \$beat }
+        beat_id: { eq: \$beatId }
         scheduled_date: { eq: \$scheduledDate }
       }
       orderBy: [{ created_at: AscNullsLast }]
@@ -32,26 +32,56 @@ const _getTasksQuery = '''
   }
 ''';
 
+const _getBeatTasksQuery = '''
+  query GetBeatTasks(\$beatId: UUID!) {
+    tasksCollection(
+      filter: { beat_id: { eq: \$beatId } }
+      orderBy: [{ scheduled_date: AscNullsLast }]
+    ) {
+      edges {
+        node {
+          id
+          beat_id
+          title
+          priority
+          duration_minutes
+          is_completed
+          scheduled_date
+          completed_at
+        }
+      }
+    }
+  }
+''';
+
 const _addTaskMutation = '''
   mutation AddTask(
     \$userId: UUID!
-    \$beat_id: String!
+    \$beatId: UUID!
     \$title: String!
-    \$energy: String!
+    \$priority: opaque
     \$durationMinutes: Int!
     \$scheduledDate: Date!
   ) {
-    insertIntoTasksCollection(objects: [{
+    insertIntotasksCollection(objects: [{
       user_id: \$userId
-      beat_id: \$beat_id
+      beat_id: \$beatId
       title: \$title
-      energy: \$energy
+      priority: \$priority
       duration_minutes: \$durationMinutes
       scheduled_date: \$scheduledDate
       is_completed: false
     }]) {
       records {
-        $_taskFields
+        id
+        user_id
+        beat_id
+        title
+        priority
+        duration_minutes
+        is_completed
+        scheduled_date
+        created_at
       }
     }
   }
@@ -59,12 +89,65 @@ const _addTaskMutation = '''
 
 const _completeTaskMutation = '''
   mutation CompleteTask(\$id: UUID!, \$completedAt: Datetime!) {
-    updateTasksCollection(
+    updatetasksCollection(
       filter: { id: { eq: \$id } }
-      set: { is_completed: true, completed_at: \$completedAt }
+      set: {
+        is_completed: true
+        completed_at: \$completedAt
+      }
     ) {
       records {
-        $_taskFields
+        id
+        is_completed
+        completed_at
+      }
+    }
+  }
+''';
+
+const _updateTaskMutation = '''
+  mutation UpdateTask(
+    \$id: UUID!
+    \$title: String!
+    \$priority: opaque
+    \$durationMinutes: Int!
+    \$beatId: UUID!
+    \$scheduledDate: Date!
+  ) {
+    updatetasksCollection(
+      filter: { id: { eq: \$id } }
+      set: {
+        title: \$title
+        priority: \$priority
+        duration_minutes: \$durationMinutes
+        beat_id: \$beatId
+        scheduled_date: \$scheduledDate
+      }
+    ) {
+      records {
+        id
+        title
+        priority
+        duration_minutes
+        beat_id
+        scheduled_date
+      }
+    }
+  }
+''';
+
+const _getCompletedCountQuery = '''
+  query GetCompletedTaskCount(\$userId: UUID!) {
+    tasksCollection(
+      filter: {
+        user_id: { eq: \$userId }
+        is_completed: { eq: true }
+      }
+    ) {
+      edges {
+        node {
+          id
+        }
       }
     }
   }
@@ -72,7 +155,10 @@ const _completeTaskMutation = '''
 
 const _deleteTaskMutation = '''
   mutation DeleteTask(\$id: UUID!) {
-    deleteFromTasksCollection(filter: { id: { eq: \$id } }) {
+    deleteFromtasksCollection(
+      filter: { id: { eq: \$id } }
+      atMost: 1
+    ) {
       records {
         id
       }
@@ -86,14 +172,14 @@ class TaskService {
   final GraphQLClient _client;
 
   Future<List<Task>> getTasks({
-    required String beat,
+    required String beatId,
     required DateTime scheduledDate,
   }) async {
     final result = await _client.query(
       QueryOptions(
         document: gql(_getTasksQuery),
         variables: {
-          'beat': beat,
+          'beatId': beatId,
           'scheduledDate': _formatDate(scheduledDate),
         },
         fetchPolicy: FetchPolicy.networkOnly,
@@ -108,11 +194,43 @@ class TaskService {
         .toList();
   }
 
+  Future<int> getCompletedTaskCount({required String userId}) async {
+    final result = await _client.query(
+      QueryOptions(
+        document: gql(_getCompletedCountQuery),
+        variables: {'userId': userId},
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
+    );
+
+    _checkErrors(result);
+
+    final edges = result.data!['tasksCollection']['edges'] as List<dynamic>;
+    return edges.length;
+  }
+
+  Future<List<Task>> getBeatTasks({required String beatId}) async {
+    final result = await _client.query(
+      QueryOptions(
+        document: gql(_getBeatTasksQuery),
+        variables: {'beatId': beatId},
+        fetchPolicy: FetchPolicy.networkOnly,
+      ),
+    );
+
+    _checkErrors(result);
+
+    final edges = result.data!['tasksCollection']['edges'] as List<dynamic>;
+    return edges
+        .map((e) => Task.fromJson(e['node'] as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<Task> addTask({
     required String userId,
-    required String beat,
+    required String beatId,
     required String title,
-    required String energy,
+    required String priority,
     required int durationMinutes,
     required DateTime scheduledDate,
   }) async {
@@ -121,9 +239,9 @@ class TaskService {
         document: gql(_addTaskMutation),
         variables: {
           'userId': userId,
-          'beat': beat,
+          'beatId': beatId,
           'title': title,
-          'energy': energy,
+          'priority': priority,
           'durationMinutes': durationMinutes,
           'scheduledDate': _formatDate(scheduledDate),
         },
@@ -133,11 +251,11 @@ class TaskService {
     _checkErrors(result);
 
     final record =
-        (result.data!['insertIntoTasksCollection']['records'] as List).first;
+        (result.data!['insertIntotasksCollection']['records'] as List).first;
     return Task.fromJson(record as Map<String, dynamic>);
   }
 
-  Future<Task> completeTask(String id) async {
+  Future<void> completeTask(String id) async {
     final result = await _client.mutate(
       MutationOptions(
         document: gql(_completeTaskMutation),
@@ -149,10 +267,31 @@ class TaskService {
     );
 
     _checkErrors(result);
+  }
 
-    final record =
-        (result.data!['updateTasksCollection']['records'] as List).first;
-    return Task.fromJson(record as Map<String, dynamic>);
+  Future<void> updateTask({
+    required String id,
+    required String title,
+    required String priority,
+    required int durationMinutes,
+    required String beatId,
+    required DateTime scheduledDate,
+  }) async {
+    final result = await _client.mutate(
+      MutationOptions(
+        document: gql(_updateTaskMutation),
+        variables: {
+          'id': id,
+          'title': title,
+          'priority': priority,
+          'durationMinutes': durationMinutes,
+          'beatId': beatId,
+          'scheduledDate': _formatDate(scheduledDate),
+        },
+      ),
+    );
+
+    _checkErrors(result);
   }
 
   Future<void> deleteTask(String id) async {

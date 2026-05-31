@@ -128,11 +128,12 @@ class _BeatList extends StatelessWidget {
               child: Text('No beats set up yet.', style: TextStyle(color: AppColors.subtle, fontSize: 13)),
             );
           }
+          final sorted = [...state.beats]..sort(_byStartTime);
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
-            itemCount: state.beats.length,
+            itemCount: sorted.length,
             separatorBuilder: (_, _) => const SizedBox(height: 9),
-            itemBuilder: (_, i) => _BeatStatCard(beat: state.beats[i]),
+            itemBuilder: (_, i) => _BeatStatCard(beat: sorted[i]),
           );
         }
         return const SizedBox.shrink();
@@ -150,7 +151,9 @@ class _BeatStatCard extends StatelessWidget {
     final info = BeatInfo.forType(beat.type);
 
     String? timeLabel;
-    if (beat.startTime != null && beat.durationMinutes != null) {
+    if (beat.startTime != null && beat.endTime != null) {
+      timeLabel = '${beat.startTime!} – ${beat.endTime!}';
+    } else if (beat.startTime != null && beat.durationMinutes != null) {
       final parts = beat.startTime!.split(':');
       if (parts.length >= 2) {
         final h = int.tryParse(parts[0]) ?? 0;
@@ -232,3 +235,12 @@ class _BeatStatCard extends StatelessWidget {
     return '$displayH:${m.toString().padLeft(2, '0')} $period';
   }
 }
+
+int _startMinutes(Beat b) {
+  if (b.startTime == null) return 9999;
+  final parts = b.startTime!.split(':');
+  if (parts.length < 2) return 9999;
+  return (int.tryParse(parts[0]) ?? 0) * 60 + (int.tryParse(parts[1]) ?? 0);
+}
+
+int _byStartTime(Beat a, Beat b) => _startMinutes(a).compareTo(_startMinutes(b));

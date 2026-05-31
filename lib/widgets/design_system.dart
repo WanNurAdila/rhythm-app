@@ -1,7 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:random_avatar/random_avatar.dart';
 import '../models/beat.dart';
 import '../theme/app_theme.dart';
+
+// ── Beat palette (matches design: 6 swatchable colors) ───────────────────────
+
+const beatPalette = [
+  Color(0xFFF5B67A), // morning orange
+  Color(0xFFA18BFF), // violet
+  Color(0xFF7AD1F5), // sky blue
+  Color(0xFFF57AA3), // pink
+  Color(0xFF6CE4A3), // green
+  Color(0xFFFFC857), // amber (default for custom)
+];
+
+const beatPaletteHex = [
+  '#f5b67a', '#a18bff', '#7ad1f5', '#f57aa3', '#6ce4a3', '#ffc857',
+];
+
+Color colorFromHex(String hex) {
+  final clean = hex.replaceFirst('#', '');
+  return Color(int.parse('FF$clean', radix: 16));
+}
 
 // ── Beat info helper ─────────────────────────────────────────────────────────
 
@@ -25,6 +46,19 @@ class BeatInfo {
       case BeatType.custom:
         return const BeatInfo(color: BeatColors.customColor, bgColor: BeatColors.customBg, label: 'Custom');
     }
+  }
+
+  // Uses beat.color for custom beats when available.
+  static BeatInfo forBeat(Beat beat) {
+    if (beat.type == BeatType.custom && beat.color != null) {
+      final color = colorFromHex(beat.color!);
+      return BeatInfo(
+        color: color,
+        bgColor: color.withValues(alpha: 0.12),
+        label: beat.name,
+      );
+    }
+    return forType(beat.type);
   }
 }
 
@@ -62,7 +96,7 @@ class _BrandPulseMarkState extends State<BrandPulseMark> with TickerProviderStat
   @override
   Widget build(BuildContext context) {
     final s = widget.size;
-    final radius = s * 0.28;
+    final radius = s * 0.22;
     return SizedBox(
       width: s,
       height: s,
@@ -78,11 +112,41 @@ class _BrandPulseMarkState extends State<BrandPulseMark> with TickerProviderStat
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [AppColors.violetBright, AppColors.violet],
+                colors: [Color(0xFFB39CFF), Color(0xFF8B6CF6), Color(0xFF6E4EE5)],
+                stops: [0.0, 0.6, 1.0],
               ),
               borderRadius: BorderRadius.circular(radius),
               boxShadow: const [
                 BoxShadow(color: AppColors.violetGlow, blurRadius: 32, offset: Offset(0, 8)),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: s * 0.78,
+                  height: s * 0.78,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: s * 0.012),
+                  ),
+                ),
+                Container(
+                  width: s * 0.5,
+                  height: s * 0.5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.22), width: s * 0.012),
+                  ),
+                ),
+                Container(
+                  width: s * 0.28,
+                  height: s * 0.28,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(s * 0.062),
+                  ),
+                ),
               ],
             ),
           ),
@@ -150,41 +214,20 @@ class MiniMark extends StatelessWidget {
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
 class RhythmAvatar extends StatelessWidget {
-  const RhythmAvatar({super.key, this.size = 36, this.initials = '?', this.accent = true});
+  const RhythmAvatar({super.key, this.size = 36, this.seed = 'default'});
   final double size;
-  final String initials;
-  final bool accent;
+  final String seed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: accent ? AppColors.violet : AppColors.surface2,
-        shape: BoxShape.circle,
-        border: accent ? null : Border.all(color: AppColors.border),
-      ),
-      child: Center(
-        child: Text(
-          initials.toUpperCase(),
-          style: TextStyle(
-            fontSize: size * 0.32,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            letterSpacing: 0.3,
-          ),
-        ),
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: RandomAvatar(seed, height: size, width: size),
       ),
     );
   }
-}
-
-String initialsFrom(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.isEmpty) return '?';
-  if (parts.length == 1) return parts[0][0].toUpperCase();
-  return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────

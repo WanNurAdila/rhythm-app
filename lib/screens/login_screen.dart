@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:toastification/toastification.dart';
 import '../blocs/authentication/authentication_bloc.dart';
 import '../blocs/authentication/authentication_state.dart';
 import '../repositories/auth_repository.dart';
 import '../theme/app_theme.dart';
 import '../widgets/authentication_form.dart';
 import '../widgets/design_system.dart';
+
+bool _isCredentialError(String? message) =>
+    message != null && message.toLowerCase().contains('credential');
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key, required this.authRepository});
@@ -21,10 +25,23 @@ class LoginScreen extends StatelessWidget {
         listener: (context, state) {
           if (state.status == AuthenticationStatus.success) {
             context.go('/home');
+          } else if (state.status == AuthenticationStatus.failure &&
+              state.errorMessage != null &&
+              !_isCredentialError(state.errorMessage)) {
+            toastification.show(
+              context: context,
+              type: ToastificationType.error,
+              style: ToastificationStyle.flatColored,
+              title: const Text('Sign in failed'),
+              description: Text(state.errorMessage!),
+              autoCloseDuration: const Duration(seconds: 6),
+              alignment: Alignment.bottomCenter,
+              showProgressBar: false,
+            );
           }
         },
         child: const Scaffold(
-          backgroundColor: AppColors.bg,
+          backgroundColor: Colors.black,
           body: SafeArea(child: _LoginBody()),
         ),
       ),
@@ -37,42 +54,69 @@ class _LoginBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
-      child: Column(
-        children: [
-          const SizedBox(height: 40),
-          const BrandPulseMark(size: 68),
-          const SizedBox(height: 24),
-          Text(
-            'Rhythm',
-            style: displayText(44),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Flow through your day.',
-            style: TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 0.1),
-          ),
-          const SizedBox(height: 56),
-          const AuthenticationForm(),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'No account? ',
-                style: TextStyle(fontSize: 13, color: AppColors.muted),
-              ),
-              GestureDetector(
-                onTap: () => context.go('/register'),
-                child: const Text(
-                  'Register',
-                  style: TextStyle(fontSize: 13, color: AppColors.violetBright, fontWeight: FontWeight.w500),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const BrandPulseMark(size: 100),
+                      const SizedBox(height: 36),
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(text: 'Rhythm', style: displayText(52)),
+                            TextSpan(text: '.', style: displayText(52, color: AppColors.violetBright)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'FLOW THROUGH YOUR DAY',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.subtle,
+                          letterSpacing: 2.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+                  child: Column(
+                    children: [
+                      const AuthenticationForm(),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'No account? ',
+                            style: TextStyle(fontSize: 13, color: AppColors.muted),
+                          ),
+                          GestureDetector(
+                            onTap: () => context.go('/register'),
+                            child: const Text(
+                              'Register',
+                              style: TextStyle(fontSize: 13, color: AppColors.violetBright, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

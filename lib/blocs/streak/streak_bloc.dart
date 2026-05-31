@@ -60,6 +60,14 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
     try {
       final today = _today();
 
+      // Skip if this beat was already completed today.
+      final alreadyRecorded = await _streakService.beatCompletionExists(
+        userId: userId,
+        beatId: event.beatId,
+        date: today,
+      );
+      if (alreadyRecorded) return;
+
       // Persist the beat completion record.
       final completion = await _streakService.recordBeatCompletion(
         userId: userId,
@@ -88,9 +96,14 @@ class StreakBloc extends Bloc<StreakEvent, StreakState> {
       final newLongest =
           newStreak > (current?.longestStreak ?? 0) ? newStreak : (current?.longestStreak ?? 0);
 
-      // Persist and cache updated streak row.
-      _streak = await _streakService.upsertStreak(
+      // Persist updated streak row and update cache locally.
+      await _streakService.updateStreak(
         userId: userId,
+        currentStreak: newStreak,
+        longestStreak: newLongest,
+        lastActiveDate: today,
+      );
+      _streak = (_streak ?? Streak(id: '', userId: userId)).copyWith(
         currentStreak: newStreak,
         longestStreak: newLongest,
         lastActiveDate: today,
