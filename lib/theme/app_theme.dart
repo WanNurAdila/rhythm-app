@@ -45,8 +45,8 @@ class BeatColors {
   static const middayBg = Color(0x1F7AD1F5);
   static const eveningColor = Color(0xFFF57AA3);
   static const eveningBg = Color(0x1FF57AA3);
-  static const customColor = Color(0xFFA18BFF);
-  static const customBg = Color(0x24A18BFF);
+  static const customColor = Color(0xFFFFC857);
+  static const customBg = Color(0x1FFFC857);
 }
 
 TextStyle displayText(double size, {Color color = AppColors.text, String? letterSpacing}) {
