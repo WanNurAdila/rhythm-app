@@ -1,5 +1,7 @@
 enum Gender { male, female, other }
 
+enum AmbientSoundType { rain, waves, cafe, fire }
+
 class Profile {
   final String id;
   final String displayName;
@@ -7,6 +9,7 @@ class Profile {
   final Gender? gender;
   final String? pronouns;
   final String? timezone;
+  final AmbientSoundType? ambientSound;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -17,6 +20,7 @@ class Profile {
     this.gender,
     this.pronouns,
     this.timezone,
+    this.ambientSound,
     required this.createdAt,
     this.updatedAt,
   });
@@ -28,6 +32,7 @@ class Profile {
     Gender? gender,
     String? pronouns,
     String? timezone,
+    AmbientSoundType? ambientSound,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -38,6 +43,7 @@ class Profile {
       gender: gender ?? this.gender,
       pronouns: pronouns ?? this.pronouns,
       timezone: timezone ?? this.timezone,
+      ambientSound: ambientSound ?? this.ambientSound,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -45,6 +51,7 @@ class Profile {
 
   factory Profile.fromJson(Map<String, dynamic> json, {String? email}) {
     final genderStr = json['gender'] as String?;
+    final ambientSoundStr = json['ambient_sound'] as String?;
     return Profile(
       id: json['id'] as String,
       displayName: json['display_name'] as String,
@@ -55,6 +62,10 @@ class Profile {
           : null,
       pronouns: json['pronouns'] as String?,
       timezone: json['timezone'] as String?,
+      ambientSound: ambientSoundStr != null
+          ? AmbientSoundType.values.firstWhere((e) => e.name == ambientSoundStr,
+              orElse: () => AmbientSoundType.rain)
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)

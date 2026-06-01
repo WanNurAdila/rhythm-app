@@ -1,7 +1,7 @@
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/profile.dart';
-export '../models/profile.dart' show Gender;
+export '../models/profile.dart' show Gender, AmbientSoundType;
 
 const _getProfileQuery = r'''
   query GetProfile($id: UUID!) {
@@ -17,6 +17,7 @@ const _getProfileQuery = r'''
           gender
           pronouns
           timezone
+          ambient_sound
           created_at
           updated_at
         }
@@ -27,21 +28,23 @@ const _getProfileQuery = r'''
 
 const _updateProfile = r'''
   mutation UpdateProfile(
-    $id:          UUID!
-    $displayName: String!
-    $email:       String
-    $gender:      opaque
-    $pronouns:    String
-    $timezone:    String
+    $id:           UUID!
+    $displayName:  String!
+    $email:        String
+    $gender:       opaque
+    $pronouns:     String
+    $timezone:     String
+    $ambientSound: opaque
   ) {
     updateprofilesCollection(
       filter: { id: { eq: $id } }
       set: {
-        display_name: $displayName
-        email:        $email
-        gender:       $gender
-        pronouns:     $pronouns
-        timezone:     $timezone
+        display_name:  $displayName
+        email:         $email
+        gender:        $gender
+        pronouns:      $pronouns
+        timezone:      $timezone
+        ambient_sound: $ambientSound
       }
     ) {
       records {
@@ -51,6 +54,7 @@ const _updateProfile = r'''
         gender
         pronouns
         timezone
+        ambient_sound
         created_at
         updated_at
       }
@@ -91,6 +95,7 @@ class ProfileService {
     Gender? gender,
     String? pronouns,
     String? timezone,
+    AmbientSoundType? ambientSound,
   }) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception('User not authenticated.');
@@ -105,6 +110,7 @@ class ProfileService {
           'gender': gender?.name,
           'pronouns': pronouns,
           'timezone': timezone,
+          'ambientSound': ambientSound?.name,
         },
       ),
     );

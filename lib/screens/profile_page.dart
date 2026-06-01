@@ -8,6 +8,7 @@ import '../blocs/beat/beat_state.dart';
 import '../blocs/task/task_bloc.dart';
 import '../blocs/task/task_state.dart';
 import '../models/beat.dart';
+import '../models/profile.dart' show AmbientSoundType;
 import '../blocs/profile/profile_bloc.dart';
 import '../blocs/profile/profile_state.dart';
 import '../blocs/streak/streak_bloc.dart';
@@ -397,12 +398,27 @@ class ProfilePage extends StatelessWidget {
                                 context, const EditNotificationsScreen()),
                           ),
                           rhythmDivider,
-                          _AccountRow(
-                            icon: Icons.music_note_outlined,
-                            title: 'Ambient sounds',
-                            sub: 'Rain · Lo-fi',
-                            onTap: () =>
-                                _navigateTo(context, const EditSoundsScreen()),
+                          BlocBuilder<ProfileBloc, ProfileState>(
+                            builder: (context, state) {
+                              final sound = state is ProfileLoaded
+                                  ? state.profile.ambientSound
+                                  : null;
+                              final sub = switch (sound) {
+                                AmbientSoundType.rain  => 'Rain',
+                                AmbientSoundType.waves => 'Ocean waves',
+                                AmbientSoundType.cafe  => 'Café',
+                                AmbientSoundType.fire  => 'Fireplace',
+                                null                   => 'None',
+                              };
+                              return _AccountRow(
+                                icon: Icons.music_note_outlined,
+                                title: 'Ambient sounds',
+                                sub: sub,
+                                onTap: () => _navigateTo(
+                                    context, const EditSoundsScreen(),
+                                    withProfileBloc: true),
+                              );
+                            },
                           ),
                           rhythmDivider,
                           _AccountRow(

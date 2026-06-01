@@ -3,12 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../blocs/focus/focus_bloc.dart';
 import '../blocs/focus/focus_event.dart';
 import '../blocs/focus/focus_state.dart' as focus_states;
+import '../blocs/profile/profile_bloc.dart';
+import '../blocs/profile/profile_state.dart';
 import '../blocs/task/task_bloc.dart';
 import '../blocs/task/task_event.dart';
+import '../models/profile.dart' show AmbientSoundType;
 import '../models/task.dart';
 import '../theme/app_theme.dart';
 
@@ -742,52 +746,121 @@ class _RingPainter extends CustomPainter {
 
 // ── Ambient sound card ─────────────────────────────────────────────────────
 
-class _SoundCard extends StatelessWidget {
+class _SoundCard extends StatefulWidget {
+  @override
+  State<_SoundCard> createState() => _SoundCardState();
+}
+
+class _SoundCardState extends State<_SoundCard> {
+  final _player = AudioPlayer();
+  bool _playing = false;
+
+  String _assetFor(AmbientSoundType type) => switch (type) {
+        AmbientSoundType.rain  => 'assets/audio/rain-ambient.mp3',
+        AmbientSoundType.waves => 'assets/audio/waves-ambient.mp3',
+        AmbientSoundType.cafe  => 'assets/audio/cafe-ambient.mp3',
+        AmbientSoundType.fire  => 'assets/audio/fire-ambient.mp3',
+      };
+
+  String _labelFor(AmbientSoundType type) => switch (type) {
+        AmbientSoundType.rain  => 'Rain',
+        AmbientSoundType.waves => 'Ocean waves',
+        AmbientSoundType.cafe  => 'Café',
+        AmbientSoundType.fire  => 'Fireplace',
+      };
+
+  Future<void> _toggle(AmbientSoundType type) async {
+    if (_playing) {
+      await _player.stop();
+      setState(() => _playing = false);
+    } else {
+      await _player.setAsset(_assetFor(type));
+      await _player.setLoopMode(LoopMode.one);
+      await _player.play();
+      setState(() => _playing = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.music_note_rounded,
-              color: AppColors.violetBright, size: 18),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Ambient sounds',
-              style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.text),
-            ),
+    return BlocBuilder<ProfileBloc, ProfileState>(
+      builder: (context, state) {
+        final ambientSound =
+            state is ProfileLoaded ? state.profile.ambientSound : null;
+        final hasSound = ambientSound != null;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border),
           ),
-          Container(
-            width: 36,
-            height: 22,
-            decoration: BoxDecoration(
-              color: AppColors.surface3,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: Container(
-                  width: 18,
-                  height: 18,
-                  decoration: const BoxDecoration(
-                      color: Colors.white, shape: BoxShape.circle),
-                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.music_note_rounded,
+                    color: hasSound ? AppColors.violetBright : AppColors.muted,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      hasSound ? _labelFor(ambientSound) : 'Ambient sounds',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: hasSound ? AppColors.text : AppColors.muted,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: hasSound ? () => _toggle(ambientSound) : null,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 36,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: _playing ? AppColors.violetBright : AppColors.surface3,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Align(
+                        alignment: _playing ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
+              if (!hasSound)
+                const Padding(
+                  padding: EdgeInsets.only(top: 5, left: 30),
+                  child: Text(
+                    'Set an ambient sound in your profile to enable',
+                    style: TextStyle(fontSize: 11, color: AppColors.muted),
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

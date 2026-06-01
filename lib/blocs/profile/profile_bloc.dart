@@ -37,6 +37,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         gender: event.gender,
         pronouns: event.pronouns,
         timezone: event.timezone,
+        ambientSound: event.ambientSound,
       );
       emit(ProfileLoaded(profile: profile));
     } catch (error) {

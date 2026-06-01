@@ -367,6 +367,7 @@ class _TaskCard extends StatelessWidget {
                     providers: [
                       BlocProvider.value(value: focusBloc),
                       BlocProvider.value(value: taskBloc),
+                      BlocProvider.value(value: context.read<ProfileBloc>()),
                     ],
                     child: FocusPage(task: task, beatName: beatName),
                   ),
