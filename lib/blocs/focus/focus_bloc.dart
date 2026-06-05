@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/focus_mode_service.dart';
 import '../../services/focus_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/task_service.dart';
 import 'focus_event.dart';
 import 'focus_state.dart';
@@ -99,6 +100,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         _focusModeService.disable(),
       ]);
 
+      await NotificationService.instance.showTaskComplete(active.task.title);
       emit(FocusComplete(task: active.task, focusedSeconds: focusedSeconds));
     } catch (error) {
       await _focusModeService.disable();

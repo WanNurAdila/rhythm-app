@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../repositories/auth_repository.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
+import '../screens/onboarding_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/splash_screen.dart';
 
@@ -21,6 +22,12 @@ class AppRouter {
             GoRoute(
               path: '/register',
               builder: (context, state) => RegisterScreen(authRepository: authRepository),
+            ),
+            GoRoute(
+              path: '/onboarding',
+              builder: (context, state) => OnboardingScreen(
+                displayName: state.extra as String? ?? '',
+              ),
             ),
             GoRoute(
               path: '/home',

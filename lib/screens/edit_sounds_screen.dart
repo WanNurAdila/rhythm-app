@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:volume_controller/volume_controller.dart';
 
 import '../blocs/profile/profile_bloc.dart';
 import '../blocs/profile/profile_event.dart';
@@ -16,7 +17,7 @@ class EditSoundsScreen extends StatefulWidget {
 }
 
 class _EditSoundsScreenState extends State<EditSoundsScreen> {
-  double _volume = 0.62;
+  double _volume = 0.5;
   bool _saving = false;
   Profile? _profile;
 
@@ -30,11 +31,25 @@ class _EditSoundsScreenState extends State<EditSoundsScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Sync slider with hardware volume — also fetches initial value immediately.
+    VolumeController.instance.showSystemUI = false;
+    VolumeController.instance.addListener(
+      (volume) { if (mounted) setState(() => _volume = volume); },
+      fetchInitialVolume: true,
+    );
+
     final state = context.read<ProfileBloc>().state;
     if (state is ProfileLoaded) {
       _profile = state.profile;
       _initActiveSound(state.profile.ambientSound);
     }
+  }
+
+  @override
+  void dispose() {
+    VolumeController.instance.removeListener();
+    super.dispose();
   }
 
   void _initActiveSound(AmbientSoundType? selected) {
@@ -83,6 +98,7 @@ class _EditSoundsScreenState extends State<EditSoundsScreen> {
           setState(() {
             _saving = false;
             _profile = state.profile;
+            _initActiveSound(state.profile.ambientSound);
           });
         } else if (state is ProfileError && _saving) {
           setState(() => _saving = false);
@@ -135,7 +151,10 @@ class _EditSoundsScreenState extends State<EditSoundsScreen> {
                                 ),
                                 child: Slider(
                                   value: _volume,
-                                  onChanged: (v) => setState(() => _volume = v),
+                                  onChanged: (v) {
+                                    setState(() => _volume = v);
+                                    VolumeController.instance.setVolume(v);
+                                  },
                                 ),
                               ),
                             ],

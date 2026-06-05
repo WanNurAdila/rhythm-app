@@ -139,6 +139,30 @@ const _updateBeatMutation = '''
   }
 ''';
 
+const _activatePresetBeatMutation = '''
+  mutation ActivatePresetBeat(
+    \$userId:    UUID!
+    \$type:      String!
+    \$name:      String!
+    \$startTime: Time!
+    \$endTime:   Time!
+    \$sortOrder: Int!
+  ) {
+    insertIntobeatsCollection(objects: [{
+      user_id:    \$userId
+      type:       \$type
+      name:       \$name
+      start_time: \$startTime
+      end_time:   \$endTime
+      is_active:  true
+      is_preset:  true
+      sort_order: \$sortOrder
+    }]) {
+      records { id }
+    }
+  }
+''';
+
 const _deleteBeatMutation = '''
   mutation DeleteBeat(\$id: UUID!) {
     deleteFrombeatsCollection(
@@ -218,6 +242,30 @@ class BeatService {
     final record =
         (result.data!['insertIntobeatsCollection']['records'] as List).first;
     return Beat.fromJson(record as Map<String, dynamic>);
+  }
+
+  Future<void> activatePresetBeat({
+    required String userId,
+    required String type,
+    required String name,
+    required String startTime,
+    required String endTime,
+    required int sortOrder,
+  }) async {
+    final result = await _client.mutate(
+      MutationOptions(
+        document: gql(_activatePresetBeatMutation),
+        variables: {
+          'userId': userId,
+          'type': type,
+          'name': name,
+          'startTime': startTime,
+          'endTime': endTime,
+          'sortOrder': sortOrder,
+        },
+      ),
+    );
+    _checkErrors(result);
   }
 
   Future<void> toggleBeat(String id, {required bool isActive}) async {

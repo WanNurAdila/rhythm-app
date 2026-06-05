@@ -15,6 +15,9 @@ class NotificationService {
       requestAlertPermission: true,
       requestSoundPermission: true,
       requestBadgePermission: false,
+      defaultPresentAlert: true,
+      defaultPresentSound: true,
+      defaultPresentBadge: false,
     );
     const settings = InitializationSettings(
       android: androidSettings,
@@ -22,6 +25,12 @@ class NotificationService {
     );
 
     await _plugin.initialize(settings: settings);
+
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: false, sound: true);
+
     _initialized = true;
   }
 

@@ -56,65 +56,66 @@ class _LoginBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: IntrinsicHeight(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const BrandPulseMark(size: 100),
-                      const SizedBox(height: 36),
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(text: 'Rhythm', style: displayText(52)),
-                            TextSpan(text: '.', style: displayText(52, color: AppColors.violetBright)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'FLOW THROUGH YOUR DAY',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.subtle,
-                          letterSpacing: 2.5,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
-                  child: Column(
-                    children: [
-                      const AuthenticationForm(),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 56, bottom: 32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const BrandPulseMark(size: 100),
+                    const SizedBox(height: 36),
+                    RichText(
+                      text: TextSpan(
                         children: [
-                          const Text(
-                            'No account? ',
-                            style: TextStyle(fontSize: 13, color: AppColors.muted),
-                          ),
-                          GestureDetector(
-                            onTap: () => context.go('/register'),
-                            child: const Text(
-                              'Register',
-                              style: TextStyle(fontSize: 13, color: AppColors.violetBright, fontWeight: FontWeight.w500),
-                            ),
-                          ),
+                          TextSpan(text: 'Rhythm', style: displayText(52)),
+                          TextSpan(text: '.', style: displayText(52, color: AppColors.violetBright)),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'FLOW THROUGH YOUR DAY',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.subtle,
+                        letterSpacing: 2.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+                child: Column(
+                  children: [
+                    const AuthenticationForm(),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'No account? ',
+                          style: TextStyle(fontSize: 13, color: AppColors.muted),
+                        ),
+                        GestureDetector(
+                          onTap: () => context.go('/register'),
+                          child: const Text(
+                            'Register',
+                            style: TextStyle(fontSize: 13, color: AppColors.violetBright, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

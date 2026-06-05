@@ -35,7 +35,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Beat _beatForNow(List<Beat> active) {
-    if (active.isEmpty) return active.first;
     final sorted = [...active]
       ..sort((a, b) => _timeToMin(a.startTime).compareTo(_timeToMin(b.startTime)));
     final nowMin = DateTime.now().hour * 60 + DateTime.now().minute;
@@ -63,9 +62,12 @@ class _HomePageState extends State<HomePage> {
 
   void _selectBeat(Beat beat) {
     setState(() => _selectedBeat = beat);
-    context.read<TaskBloc>().add(
-      TasksLoadRequested(beatId: beat.id, scheduledDate: DateTime.now()),
-    );
+    // Preset IDs (e.g. 'preset_morning') are local placeholders — no DB row exists yet.
+    if (!beat.id.startsWith('preset_')) {
+      context.read<TaskBloc>().add(
+        TasksLoadRequested(beatId: beat.id, scheduledDate: DateTime.now()),
+      );
+    }
   }
 
   @override
@@ -79,10 +81,12 @@ class _HomePageState extends State<HomePage> {
     if (beatState is BeatLoaded && beatState.beats.isNotEmpty) {
       _initialLoadDone = true;
       final active = beatState.beats.where((b) => b.isActive).toList();
-      final initial = active.isNotEmpty ? _beatForNow(active) : beatState.beats.first;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _selectBeat(initial);
-      });
+      if (active.isNotEmpty) {
+        final initial = _beatForNow(active);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _selectBeat(initial);
+        });
+      }
     }
   }
 
@@ -94,7 +98,7 @@ class _HomePageState extends State<HomePage> {
         if (!_initialLoadDone) {
           _initialLoadDone = true;
           final active = state.beats.where((b) => b.isActive).toList();
-          _selectBeat(active.isNotEmpty ? _beatForNow(active) : state.beats.first);
+          if (active.isNotEmpty) _selectBeat(_beatForNow(active));
           return;
         }
         // Re-sync _selectedBeat after beats are edited.

@@ -771,13 +771,13 @@ class _SoundCardState extends State<_SoundCard> {
 
   Future<void> _toggle(AmbientSoundType type) async {
     if (_playing) {
-      await _player.stop();
       setState(() => _playing = false);
+      await _player.stop();
     } else {
+      setState(() => _playing = true);
       await _player.setAsset(_assetFor(type));
       await _player.setLoopMode(LoopMode.one);
       await _player.play();
-      setState(() => _playing = true);
     }
   }
 

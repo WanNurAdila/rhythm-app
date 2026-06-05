@@ -612,32 +612,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 32),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 6),
-                        child: GestureDetector(
-                          onTap: () {},
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.hot),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'Delete account',
-                                style: TextStyle(
-                                  color: AppColors.hot,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),

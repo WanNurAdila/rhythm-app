@@ -42,7 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         displayName: _displayNameController.text.trim(),
       );
       if (!mounted) return;
-      context.go('/home');
+      context.go('/onboarding', extra: _displayNameController.text.trim());
     } catch (e) {
       setState(() { _errorMessage = e.toString(); });
     } finally {
